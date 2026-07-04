@@ -13,10 +13,20 @@ bun install
 bun src/cli.ts ./public --port 3000
 ```
 
-Or through the package binary:
+## Global install from this checkout
+
+Until `static-serve` is published to a package registry, install it globally from
+this repository:
 
 ```sh
-bunx static-serve ./public --port 3000
+bun install
+bun link
+```
+
+Then use the package binary from anywhere:
+
+```sh
+static-serve ./public --port 3000
 ```
 
 ## Development
