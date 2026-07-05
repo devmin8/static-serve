@@ -21,5 +21,10 @@
   "devDependencies": {
     "@types/bun": "latest",
     "typescript": "latest"
+  },
+  "dependencies": {
+    "marked": "^18.0.5",
+    "marked-footnote": "^1.4.0",
+    "shiki": "^4.3.1"
   }
 }

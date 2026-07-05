@@ -1,8 +1,10 @@
 import type { Stats } from "node:fs";
 import { readdir, realpath, stat } from "node:fs/promises";
-import { join, relative, resolve, sep } from "node:path";
+import { basename, extname, join, relative, resolve, sep } from "node:path";
+import { LruCache, hashText } from "./cache";
 import { DEFAULT_FAVICON_ICO_BYTES } from "./favicon";
 import { renderDirectoryPage, type DirectoryEntry } from "./html";
+import { renderMarkdownPage } from "./markdown";
 
 type ServerOptions = {
   root: string;
@@ -104,7 +106,52 @@ export async function handleRequest(request: Request, root: string): Promise<Res
     return withCors(textResponse("Not found", 404));
   }
 
+  // Markdown is rendered to a styled HTML page on the fly. ?raw opts out and serves
+  // the original text file, so the source stays reachable when you want it.
+  if (isMarkdownPath(resolved.path) && !url.searchParams.has("raw")) {
+    return withCors(await markdownResponse(resolved.path, request));
+  }
+
   return withCors(fileResponse(resolved.path, fileStat, request.method));
+}
+
+const MARKDOWN_EXTENSIONS = new Set([".md", ".markdown"]);
+
+// Rendering (marked + Shiki highlighting) is the expensive step, so we memoize the
+// finished HTML. Bounded by entry count and TTL to keep memory in check on a
+// long-lived server browsing a large tree.
+const renderedMarkdown = new LruCache<string, string>({ maxEntries: 256, ttlMs: 30 * 60 * 1000 });
+
+function isMarkdownPath(path: string): boolean {
+  return MARKDOWN_EXTENSIONS.has(extname(path).toLowerCase());
+}
+
+async function markdownResponse(path: string, request: Request): Promise<Response> {
+  const source = await Bun.file(path).text();
+  // Hash path + content: two files with identical bodies keep distinct keys (and
+  // titles), and any edit yields a fresh key. The same value is the ETag, so an
+  // unchanged file revalidates to a cheap 304 without re-reading the render cache.
+  const etag = `"${hashText(`${path}\0${source}`)}"`;
+
+  if (request.headers.get("If-None-Match") === etag) {
+    return new Response(null, { status: 304, headers: markdownCacheHeaders(etag) });
+  }
+
+  let html = renderedMarkdown.get(etag);
+  if (html === undefined) {
+    html = await renderMarkdownPage({ markdown: source, fallbackTitle: basename(path) });
+    renderedMarkdown.set(etag, html);
+  }
+
+  return new Response(request.method === "HEAD" ? null : html, {
+    headers: { "Content-Type": "text/html; charset=utf-8", ...markdownCacheHeaders(etag) }
+  });
+}
+
+// no-cache keeps the browser revalidating every visit (so edits show immediately)
+// while the ETag makes that revalidation a bodiless 304 whenever nothing changed.
+function markdownCacheHeaders(etag: string): Record<string, string> {
+  return { ETag: etag, "Cache-Control": "no-cache" };
 }
 
 async function resolveRequestPath(root: string, urlPathname: string) {

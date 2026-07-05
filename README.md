@@ -6,6 +6,19 @@ It serves files directly so the browser handles them normally. Directories rende
 
 ![Static Serve directory listing](assets/screenshot.png)
 
+## Markdown rendering
+
+`.md` and `.markdown` files are rendered on the fly into a styled HTML page (warm
+"paper" theme) with full GitHub-Flavored Markdown — headings, tables, task lists,
+blockquotes — and Shiki syntax highlighting for fenced code. Clicking a markdown
+file in the listing shows a loader while the first render runs.
+
+- **Caching** — rendered HTML is memoized in-memory (LRU, keyed by a hash of the
+  file path + contents) and served with a matching `ETag`. Repeat visits
+  revalidate to a cheap `304`, and any edit produces a fresh key automatically.
+- **Raw source** — append `?raw` to any markdown URL to get the original text
+  instead of the rendered page.
+
 ## Usage
 
 ```sh
