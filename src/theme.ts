@@ -38,19 +38,24 @@ export const THEME_TOKENS = `
   --muted: #8a8177;
   --faint: #a89e91;
   --line: #ece5da;
-  --line-soft: #f4efe7;
+  --line-soft: #f2ede4;
   --line-strong: #ddd2c3;
-  --accent: #a85e15;
-  --accent-strong: #874a10;
-  --accent-soft: #f7ecdb;
-  --accent-line: #e6cfa6;
-  --accent-ring: rgba(168, 94, 21, 0.28);
-  --focus: #a85e15;
-  --focus-ring: rgba(168, 94, 21, 0.32);
+  --accent: #c0492f;
+  --accent-strong: #9d3925;
+  --accent-soft: #faf0ea;
+  --accent-line: #efcdbf;
+  --accent-ring: rgba(192, 73, 47, 0.24);
+  --quote-bg: transparent;
+  --quote-border: #efcdbf;
+  --quote-text: #4f4a43;
+  --danger: #b0402c;
+  --danger-soft: rgba(176, 64, 44, 0.11);
+  --focus: #c0492f;
+  --focus-ring: rgba(192, 73, 47, 0.3);
   --amber: #b8791f;
-  --amber-soft: #fdf3e0;
+  --amber-soft: #fdf6e9;
   --green: #5f7a3e;
-  --green-soft: #eef2e6;
+  --green-soft: #f1f4ea;
   --folder: #8a6d2b;
   --folder-soft: rgba(138, 109, 43, 0.1);
   --row-hover: #f6f1e8;
@@ -61,6 +66,7 @@ export const THEME_TOKENS = `
   --shadow: 0 18px 44px rgba(72, 52, 26, 0.1), 0 1px 0 rgba(255, 255, 255, 0.6) inset;
   --shadow-soft: 0 10px 26px rgba(72, 52, 26, 0.08), 0 1px 0 rgba(255, 255, 255, 0.5) inset;
   --shadow-control: 0 1px 2px rgba(72, 52, 26, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.04) inset;
+  --overlay: rgba(26, 22, 19, 0.6);
 }
 
 :root[data-theme="dark"] {
@@ -83,6 +89,11 @@ export const THEME_TOKENS = `
   --accent-soft: rgba(227, 150, 58, 0.15);
   --accent-line: rgba(227, 150, 58, 0.38);
   --accent-ring: rgba(227, 150, 58, 0.3);
+  --quote-bg: rgba(227, 150, 58, 0.15);
+  --quote-border: #e3963a;
+  --quote-text: #c7bcac;
+  --danger: #e8996a;
+  --danger-soft: rgba(232, 153, 106, 0.13);
   --focus: #f0a94e;
   --focus-ring: rgba(227, 150, 58, 0.45);
   --amber: #e3963a;
@@ -99,6 +110,7 @@ export const THEME_TOKENS = `
   --shadow: 0 18px 48px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 240, 220, 0.05) inset;
   --shadow-soft: 0 10px 28px rgba(0, 0, 0, 0.32), 0 1px 0 rgba(255, 240, 220, 0.045) inset;
   --shadow-control: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 240, 220, 0.05) inset;
+  --overlay: rgba(0, 0, 0, 0.58);
 }
 
 ::selection { background: var(--sel); }
@@ -116,7 +128,7 @@ export const THEME_TOKENS = `
   height: 38px;
   padding: 0;
   border: 1px solid var(--line-strong);
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--surface-2);
   color: var(--text-soft);
   cursor: pointer;

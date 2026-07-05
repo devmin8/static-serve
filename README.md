@@ -13,6 +13,11 @@ It serves files directly so the browser handles them normally. Directories rende
 blockquotes — and Shiki syntax highlighting for fenced code. Clicking a markdown
 file in the listing shows a loader while the first render runs.
 
+For richer documents, use the semantic patterns in
+[docs/markdown-authoring.md](docs/markdown-authoring.md): callouts, quote blocks,
+and responsive columns are written as Markdown/directives and rendered
+consistently across light and dark themes.
+
 - **Caching** — rendered HTML is memoized in-memory (LRU, keyed by a hash of the
   file path + contents) and served with a matching `ETag`. Repeat visits
   revalidate to a cheap `304`, and any edit produces a fresh key automatically.

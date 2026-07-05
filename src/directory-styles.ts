@@ -478,7 +478,7 @@ export const DIRECTORY_STYLES = `
       display: none;
       align-items: center;
       justify-content: center;
-      background: rgba(26, 22, 19, 0.6);
+      background: var(--overlay);
       backdrop-filter: blur(3px);
     }
     /* Shown instantly (no fade) so the forced paint before navigation is visible. */
@@ -489,7 +489,7 @@ export const DIRECTORY_STYLES = `
       align-items: center;
       gap: 14px;
       padding: 26px 30px;
-      border-radius: 12px;
+      border-radius: 8px;
       background: var(--surface-2);
       box-shadow: var(--shadow);
     }
