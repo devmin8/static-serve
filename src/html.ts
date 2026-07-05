@@ -1,4 +1,5 @@
 import { dirname, posix } from "node:path";
+import { FAVICON_HREF, FAVICON_PNG_HREF } from "./favicon";
 
 export type DirectoryEntry = {
   name: string;
@@ -25,7 +26,8 @@ export function renderDirectoryPage({ pathName, entries }: PageOptions): string 
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(title)}</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2308090b'/%3E%3Cpath d='M15 23a6 6 0 0 1 6-6h9l5 6h8a6 6 0 0 1 6 6v13a6 6 0 0 1-6 6H21a6 6 0 0 1-6-6V23Z' fill='%2317191f' stroke='%2357c7b6' stroke-width='4'/%3E%3Cpath d='M15 29h34' stroke='%236e7cff' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="icon" type="image/png" sizes="32x32" href="${FAVICON_PNG_HREF}">
+  <link rel="icon" type="image/svg+xml" href="${FAVICON_HREF}">
   <style>
     @font-face {
       font-family: "Geist";

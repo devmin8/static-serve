@@ -1,5 +1,6 @@
 import { readdir, realpath, stat } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";
+import { DEFAULT_FAVICON_ICO_BYTES } from "./favicon";
 import { renderDirectoryPage, type DirectoryEntry } from "./html";
 
 type ServerOptions = {
@@ -50,6 +51,10 @@ export async function handleRequest(request: Request, root: string): Promise<Res
   const resolved = await resolveRequestPath(root, url.pathname);
 
   if (!resolved.ok) {
+    if (url.pathname === "/favicon.ico" && resolved.status === 404) {
+      return faviconResponse(request.method);
+    }
+
     return textResponse(resolved.message, resolved.status);
   }
 
@@ -164,6 +169,18 @@ function htmlResponse(body: string, method: string): Response {
   return new Response(method === "HEAD" ? null : body, {
     headers: {
       "Content-Type": "text/html; charset=utf-8"
+    }
+  });
+}
+
+function faviconResponse(method: string): Response {
+  const body = method === "HEAD" ? null : new Blob([DEFAULT_FAVICON_ICO_BYTES], { type: "image/x-icon" });
+
+  return new Response(body, {
+    headers: {
+      "Content-Type": "image/x-icon",
+      "Content-Length": String(DEFAULT_FAVICON_ICO_BYTES.byteLength),
+      "Cache-Control": "public, max-age=86400"
     }
   });
 }

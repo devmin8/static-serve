@@ -33,7 +33,12 @@ describe("handleRequest", () => {
     expect(html).toContain("hello world.txt");
     expect(html).toContain("Search this folder");
     expect(html).toContain("<title>Static Serve - Root</title>");
-    expect(html).toContain('rel="icon"');
+    expect(html).toContain('<link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,');
+    expect(html).toContain('<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,');
+
+    const faviconHref = html.match(/<link rel="icon" type="image\/svg\+xml" href="([^"]+)">/)?.[1];
+    expect(faviconHref).toBeDefined();
+    expect(decodeURIComponent(faviconHref!.replace("data:image/svg+xml,", ""))).toStartWith("<svg");
   });
 
   test("serves files directly", async () => {
@@ -41,6 +46,43 @@ describe("handleRequest", () => {
 
     expect(response.status).toBe(200);
     expect(await response.text()).toBe("hello");
+  });
+
+  test("serves a default root favicon when none exists", async () => {
+    const faviconRoot = await mkdtemp(join(tmpdir(), "static-serve-favicon-"));
+
+    try {
+      const response = await handleRequest(
+        new Request("http://local/favicon.ico"),
+        await realpath(faviconRoot)
+      );
+      const body = await response.arrayBuffer();
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("Content-Type")).toBe("image/x-icon");
+      expect(response.headers.get("Content-Length")).toBe(String(body.byteLength));
+      expect(body.byteLength).toBeGreaterThan(22);
+    } finally {
+      await rm(faviconRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("serves a user root favicon before the default favicon", async () => {
+    const faviconRoot = await mkdtemp(join(tmpdir(), "static-serve-favicon-"));
+
+    try {
+      await writeFile(join(faviconRoot, "favicon.ico"), "custom-icon");
+
+      const response = await handleRequest(
+        new Request("http://local/favicon.ico"),
+        await realpath(faviconRoot)
+      );
+
+      expect(response.status).toBe(200);
+      expect(await response.text()).toBe("custom-icon");
+    } finally {
+      await rm(faviconRoot, { recursive: true, force: true });
+    }
   });
 
   test("redirects directories to a trailing slash", async () => {
