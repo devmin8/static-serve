@@ -1,5 +1,6 @@
+import type { Stats } from "node:fs";
 import { readdir, realpath, stat } from "node:fs/promises";
-import { relative, resolve, sep } from "node:path";
+import { join, relative, resolve, sep } from "node:path";
 import { DEFAULT_FAVICON_ICO_BYTES } from "./favicon";
 import { renderDirectoryPage, type DirectoryEntry } from "./html";
 
@@ -42,20 +43,37 @@ export async function startServer(options: ServerOptions): Promise<StartedServer
   };
 }
 
+// Local dev servers are often loaded from a different origin than the assets they
+// expose (e.g. localhost:3000 fetching from localhost:8080). Browsers block those
+// cross-origin reads unless we opt in with permissive CORS headers on every response.
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+  "Access-Control-Allow-Headers": "*"
+};
+
 export async function handleRequest(request: Request, root: string): Promise<Response> {
+  // Preflight requests never read a file; answer them up front so cross-origin
+  // clients can proceed to the actual GET/HEAD without hitting path resolution.
+  if (request.method === "OPTIONS") {
+    return withCors(new Response(null, { status: 204 }));
+  }
+
   if (request.method !== "GET" && request.method !== "HEAD") {
-    return textResponse("Method not allowed", 405, { Allow: "GET, HEAD" });
+    return withCors(textResponse("Method not allowed", 405, { Allow: "GET, HEAD, OPTIONS" }));
   }
 
   const url = new URL(request.url);
   const resolved = await resolveRequestPath(root, url.pathname);
 
   if (!resolved.ok) {
+    // Serve a built-in favicon only when the root directory has none, so browser
+    // tab requests do not 404 while browsing directory listings.
     if (url.pathname === "/favicon.ico" && resolved.status === 404) {
-      return faviconResponse(request.method);
+      return withCors(faviconResponse(request.method));
     }
 
-    return textResponse(resolved.message, resolved.status);
+    return withCors(textResponse(resolved.message, resolved.status));
   }
 
   const fileStat = await stat(resolved.path);
@@ -63,26 +81,30 @@ export async function handleRequest(request: Request, root: string): Promise<Res
   if (fileStat.isDirectory()) {
     if (!url.pathname.endsWith("/")) {
       url.pathname = `${url.pathname}/`;
-      return Response.redirect(url, 308);
+      return withCors(Response.redirect(url, 308));
+    }
+
+    // Prefer index.html over a generated listing, matching normal static hosting.
+    const indexPath = join(resolved.path, "index.html");
+    try {
+      const indexStat = await stat(indexPath);
+      if (indexStat.isFile()) {
+        return withCors(fileResponse(indexPath, indexStat, request.method));
+      }
+    } catch {
+      // Fall through to directory listing when index.html is missing.
     }
 
     const entries = await readDirectoryEntries(root, resolved.path, url.pathname);
     const html = renderDirectoryPage({ pathName: url.pathname, entries });
-    return htmlResponse(html, request.method);
+    return withCors(htmlResponse(html, request.method));
   }
 
   if (!fileStat.isFile()) {
-    return textResponse("Not found", 404);
+    return withCors(textResponse("Not found", 404));
   }
 
-  const file = Bun.file(resolved.path);
-  return new Response(request.method === "HEAD" ? null : file, {
-    headers: {
-      "Content-Type": file.type || "application/octet-stream",
-      "Content-Length": String(fileStat.size),
-      "Last-Modified": fileStat.mtime.toUTCString()
-    }
-  });
+  return withCors(fileResponse(resolved.path, fileStat, request.method));
 }
 
 async function resolveRequestPath(root: string, urlPathname: string) {
@@ -163,6 +185,29 @@ function ensureTrailingSlash(value: string): string {
 
 function encodePathSegment(value: string): string {
   return encodeURIComponent(value).replaceAll("%2F", "/");
+}
+
+function withCors(response: Response): Response {
+  // Applied at each return site instead of inside response helpers so every exit
+  // path (redirects, errors, files, HTML) gets the same headers without duplicating
+  // CORS logic across fileResponse, htmlResponse, textResponse, and faviconResponse.
+  for (const [name, value] of Object.entries(CORS_HEADERS)) {
+    response.headers.set(name, value);
+  }
+
+  return response;
+}
+
+function fileResponse(path: string, fileStat: Stats, method: string): Response {
+  const file = Bun.file(path);
+
+  return new Response(method === "HEAD" ? null : file, {
+    headers: {
+      "Content-Type": file.type || "application/octet-stream",
+      "Content-Length": String(fileStat.size),
+      "Last-Modified": fileStat.mtime.toUTCString()
+    }
+  });
 }
 
 function htmlResponse(body: string, method: string): Response {

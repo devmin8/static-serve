@@ -97,4 +97,49 @@ describe("handleRequest", () => {
 
     expect(response.status).toBe(403);
   });
+
+  test("serves index.html when a directory contains one", async () => {
+    const indexRoot = await mkdtemp(join(tmpdir(), "static-serve-index-"));
+
+    try {
+      await mkdir(join(indexRoot, "site"));
+      await writeFile(join(indexRoot, "site", "index.html"), "<!doctype html><title>Site</title>");
+
+      const realIndexRoot = await realpath(indexRoot);
+      const response = await handleRequest(new Request("http://local/site/"), realIndexRoot);
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("Content-Type")).toContain("text/html");
+      expect(await response.text()).toBe("<!doctype html><title>Site</title>");
+    } finally {
+      await rm(indexRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("falls back to a directory listing when index.html is missing", async () => {
+    const response = await handleRequest(new Request("http://local/nested/"), realRoot);
+    const html = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(html).toContain("deep.txt");
+    expect(html).toContain("Search this folder");
+  });
+
+  test("adds liberal CORS headers to responses", async () => {
+    const response = await handleRequest(new Request("http://local/hello%20world.txt"), realRoot);
+
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    expect(response.headers.get("Access-Control-Allow-Methods")).toBe("GET, HEAD, OPTIONS");
+    expect(response.headers.get("Access-Control-Allow-Headers")).toBe("*");
+  });
+
+  test("handles CORS preflight requests", async () => {
+    const response = await handleRequest(
+      new Request("http://local/hello%20world.txt", { method: "OPTIONS" }),
+      realRoot
+    );
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe("*");
+  });
 });
